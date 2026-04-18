@@ -834,3 +834,173 @@ kubectl get ingress -n bookstore    # Get ALB URL
 | Consul | 8500 | 8500 | ClusterIP only |
 | Zipkin | 9411 | 9411 | ClusterIP only |
 | MySQL (RDS) | 3306 | N/A | RDS endpoint |
+
+
+---
+
+## Inter-Pod Communication — How Services Talk to Each Other
+
+### The Golden Rule
+**Pods never talk to other pods directly by IP.**
+They always go through a Kubernetes **Service** which provides:
+- Stable DNS name (survives pod restarts)
+- Load balancing across all healthy pods
+- Health-check based routing (unhealthy pods removed automatically)
+
+---
+
+### Service Exposure Matrix
+
+| Service | Type | Accessible From | DNS Name (inside cluster) |
+|---|---|---|---|
+| bookstore-frontend | ClusterIP | ALB Ingress only | `bookstore-frontend.bookstore.svc.cluster.local` |
+| bookstore-api-gateway | ClusterIP | ALB Ingress only | `bookstore-api-gateway.bookstore.svc.cluster.local` |
+| bookstore-account-service | ClusterIP | Gateway + other services | `bookstore-account-service.bookstore.svc.cluster.local` |
+| bookstore-catalog-service | ClusterIP | Gateway + order-service | `bookstore-catalog-service.bookstore.svc.cluster.local` |
+| bookstore-order-service | ClusterIP | Gateway only | `bookstore-order-service.bookstore.svc.cluster.local` |
+| bookstore-billing-service | ClusterIP | Gateway + order-service | `bookstore-billing-service.bookstore.svc.cluster.local` |
+| bookstore-payment-service | ClusterIP | Gateway + order-service | `bookstore-payment-service.bookstore.svc.cluster.local` |
+| consul-service | ClusterIP (Headless) | All services | `consul-service.bookstore.svc.cluster.local` |
+| zipkin-service | ClusterIP | All services | `zipkin-service.bookstore.svc.cluster.local` |
+| RDS MySQL | External | All services | `<rds-endpoint>.rds.amazonaws.com` |
+
+---
+
+### Communication Flow Diagram
+
+```
+                    ┌─────────────────────────────────────────┐
+                    │           ALB (Public)                   │
+                    └──────────────┬──────────────────────────┘
+                                   │
+                    ┌──────────────▼──────────────────────────┐
+                    │  Ingress Controller                      │
+                    │  /api/* → api-gateway ClusterIP :8765   │
+                    │  /*     → frontend ClusterIP :80        │
+                    └──────────────┬──────────────────────────┘
+                                   │
+                    ┌──────────────▼──────────────────────────┐
+                    │  API Gateway (ClusterIP)                 │
+                    │  Resolves lb:// via Consul               │
+                    └──┬──────┬──────┬──────┬──────┬──────────┘
+                       │      │      │      │      │
+              ┌────────▼─┐ ┌──▼───┐ ┌▼───┐ ┌▼────┐ ┌▼──────┐
+              │ Account  │ │Catalog│ │Order│ │Billing│ │Payment│
+              │ClusterIP │ │ClusterIP│ │ClusterIP│ │ClusterIP│ │ClusterIP│
+              │  :4001   │ │ :6001 │ │:7001│ │:5001 │ │:8001  │
+              └──────────┘ └───────┘ └──┬──┘ └──────┘ └───────┘
+                                        │
+                              ┌─────────┼──────────┐
+                              │         │          │
+                         ┌────▼───┐ ┌───▼───┐ ┌───▼────┐
+                         │Catalog │ │Billing│ │Payment │
+                         │Feign   │ │Feign  │ │Feign   │
+                         │:6001   │ │:5001  │ │:8001   │
+                         └────────┘ └───────┘ └────────┘
+                              │         │          │
+                              └─────────┴──────────┘
+                                        │
+                              ┌─────────▼──────────┐
+                              │   RDS MySQL :3306   │
+                              └────────────────────┘
+```
+
+---
+
+### Feign Client Configuration for K8s
+
+Each service uses Feign to call other services. In the `kubernetes` profile, Feign resolves service names via Consul:
+
+```java
+// Order service calling Catalog service
+@FeignClient(name = "bookstore-catalog-service")
+public interface CatalogFeignClient {
+    @GetMapping("/product/{productId}")
+    GetProductResponse getProduct(@PathVariable String productId);
+}
+```
+
+Consul resolves `bookstore-catalog-service` → pod IPs → Spring Cloud LoadBalancer picks one.
+
+---
+
+### What Happens When a Pod Restarts
+
+```
+Before restart:
+  catalog-service Pod A → IP: 10.0.10.21  ← registered in Consul
+  catalog-service Pod B → IP: 10.0.20.21  ← registered in Consul
+
+Pod A crashes and restarts:
+  catalog-service Pod A → IP: 10.0.10.35  (new IP!)
+
+Consul health check detects:
+  10.0.10.21 → FAILING → removed from registry
+  10.0.10.35 → PASSING → added to registry
+
+Gateway load balancer:
+  Next request → 10.0.20.21 (Pod B, still healthy)
+  After Pod A recovers → round-robin between 10.0.10.35 and 10.0.20.21
+```
+
+Zero downtime — the ClusterIP Service and Consul handle it automatically.
+
+---
+
+### Consul in Kubernetes — Headless Service
+
+Consul uses a **Headless Service** (no ClusterIP) so each pod is individually addressable:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul-service
+  namespace: bookstore
+spec:
+  clusterIP: None          # Headless - no virtual IP
+  selector:
+    app: consul
+  ports:
+  - name: http
+    port: 8500
+  - name: rpc
+    port: 8300
+  - name: serf-lan
+    port: 8301
+```
+
+DNS for headless service returns all pod IPs directly:
+```
+consul-service.bookstore.svc.cluster.local
+  → 10.0.10.30 (consul pod 0)
+  → 10.0.10.31 (consul pod 1)
+  → 10.0.10.32 (consul pod 2)
+```
+
+Each microservice connects to any Consul pod — they form a cluster and share state.
+
+---
+
+### Summary — Exposure Rules
+
+```
+NEVER expose directly to internet:
+  ✗ Account Service
+  ✗ Catalog Service
+  ✗ Order Service
+  ✗ Billing Service
+  ✗ Payment Service
+  ✗ Consul
+  ✗ Zipkin
+  ✗ MySQL (RDS - private subnet)
+
+Only expose via ALB Ingress:
+  ✓ API Gateway  (/api/*)
+  ✓ Frontend     (/*)
+
+Internal ClusterIP (pod-to-pod only):
+  ✓ All microservices
+  ✓ Consul
+  ✓ Zipkin
+```
