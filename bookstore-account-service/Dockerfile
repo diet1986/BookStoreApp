@@ -6,9 +6,11 @@ ARG JAR_FILE
 
 COPY target/${JAR_FILE} account-service.jar
 
-# dockerize waits for MySQL to be ready before starting the service
 COPY dockerize dockerize
 
-CMD ./dockerize -wait tcp://${DB_HOST:bookstore-mysql-db}:${DB_PORT:3306} -timeout 15m \
+ENV DB_HOST=bookstore-mysql-db
+ENV DB_PORT=3306
+
+CMD ./dockerize -wait tcp://${DB_HOST}:${DB_PORT} -timeout 15m \
     java -Djava.security.egd=file:/dev/./urandom \
     -jar /account-service.jar

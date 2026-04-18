@@ -14,36 +14,26 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.Resource;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
-import org.springframework.security.oauth2.core.OAuth2AccessToken;
-import org.springframework.security.oauth2.core.OAuth2RefreshToken;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
-import org.springframework.security.oauth2.server.authorization.authentication.OAuth2AccessTokenAuthenticationToken;
-import org.springframework.security.oauth2.server.authorization.authentication.OAuth2ClientAuthenticationToken;
-import org.springframework.security.oauth2.server.authorization.client.InMemoryRegisteredClientRepository;
+import org.springframework.security.oauth2.server.authorization.JdbcOAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.client.JdbcRegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClient;
 import org.springframework.security.oauth2.server.authorization.client.RegisteredClientRepository;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configuration.OAuth2AuthorizationServerConfiguration;
 import org.springframework.security.oauth2.server.authorization.config.annotation.web.configurers.OAuth2AuthorizationServerConfigurer;
 import org.springframework.security.oauth2.server.authorization.settings.AuthorizationServerSettings;
 import org.springframework.security.oauth2.server.authorization.settings.TokenSettings;
-import org.springframework.security.oauth2.server.authorization.token.DefaultOAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.JwtEncodingContext;
-import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenCustomizer;
-import org.springframework.security.oauth2.server.authorization.InMemoryOAuth2AuthorizationService;
-import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -75,6 +65,9 @@ public class AuthorizationServerConfig {
     @Autowired
     private AuthenticationManager authenticationManager;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
     @Value("${security.jwt.key-store}")
     private Resource keyStore;
 
@@ -96,7 +89,9 @@ public class AuthorizationServerConfig {
      */
     @Bean
     @Order(1)
-    public SecurityFilterChain authorizationServerSecurityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain authorizationServerSecurityFilterChain(
+            HttpSecurity http,
+            OAuth2AuthorizationService oAuth2AuthorizationService) throws Exception {
         OAuth2AuthorizationServerConfiguration.applyDefaultSecurity(http);
 
         PasswordGrantAuthenticationProvider passwordGrantProvider =
@@ -111,45 +106,59 @@ public class AuthorizationServerConfig {
             );
 
         http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
-        // Disable CORS on auth server - gateway handles CORS for all downstream services
         http.cors(cors -> cors.disable());
 
         SecurityFilterChain chain = http.build();
 
-        // Wire token generator and authorization service AFTER the chain is built
-        // so the shared objects are fully initialized
         OAuth2TokenGenerator<?> tokenGenerator = http.getSharedObject(OAuth2TokenGenerator.class);
-        OAuth2AuthorizationService authorizationService =
-            http.getSharedObject(OAuth2AuthorizationService.class);
         passwordGrantProvider.setTokenGenerator(tokenGenerator);
-        passwordGrantProvider.setAuthorizationService(authorizationService);
+        // Use JDBC authorization service (shared across instances)
+        passwordGrantProvider.setAuthorizationService(oAuth2AuthorizationService);
 
         return chain;
     }
 
     /**
-     * Registered OAuth2 client.
-     * Matches the clientId/clientSecret used by the React frontend.
+     * JDBC-backed registered client repository.
+     * Stores OAuth2 client registrations in DB — shared across all instances.
+     * On first run, registers the default client if not already present.
      */
     @Bean
     public RegisteredClientRepository registeredClientRepository() {
-        RegisteredClient client = RegisteredClient.withId(UUID.randomUUID().toString())
-            .clientId("93ed453e-b7ac-4192-a6d4-c45fae0d99ac")
-            .clientSecret(passwordEncoder.encode("client.devd123"))
-            .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
-            .authorizationGrantType(AuthorizationGrantType.PASSWORD)
-            .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
-            .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
-            .scope("read")
-            .scope("write")
-            .tokenSettings(TokenSettings.builder()
-                .accessTokenTimeToLive(Duration.ofHours(1))
-                .refreshTokenTimeToLive(Duration.ofDays(30))
-                .reuseRefreshTokens(false)
-                .build())
-            .build();
+        JdbcRegisteredClientRepository repository = new JdbcRegisteredClientRepository(jdbcTemplate);
 
-        return new InMemoryRegisteredClientRepository(client);
+        // Register default client if not already in DB
+        RegisteredClient existing = repository.findByClientId("93ed453e-b7ac-4192-a6d4-c45fae0d99ac");
+        if (existing == null) {
+            RegisteredClient client = RegisteredClient.withId(UUID.randomUUID().toString())
+                .clientId("93ed453e-b7ac-4192-a6d4-c45fae0d99ac")
+                .clientSecret(passwordEncoder.encode("client.devd123"))
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
+                .authorizationGrantType(AuthorizationGrantType.PASSWORD)
+                .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
+                .scope("read")
+                .scope("write")
+                .tokenSettings(TokenSettings.builder()
+                    .accessTokenTimeToLive(Duration.ofHours(1))
+                    .refreshTokenTimeToLive(Duration.ofDays(30))
+                    .reuseRefreshTokens(false)
+                    .build())
+                .build();
+            repository.save(client);
+        }
+
+        return repository;
+    }
+
+    /**
+     * JDBC-backed OAuth2 authorization service.
+     * Stores tokens in DB — shared across all instances.
+     * Enables horizontal scaling of account-service without token loss.
+     */
+    @Bean
+    public OAuth2AuthorizationService authorizationService(RegisteredClientRepository registeredClientRepository) {
+        return new JdbcOAuth2AuthorizationService(jdbcTemplate, registeredClientRepository);
     }
 
     /**
