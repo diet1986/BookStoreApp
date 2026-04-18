@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.net.URI;
 
 /**
@@ -83,9 +83,9 @@ public class ProductCategoryController {
     
         Page<ProductCategory> list = productCategoryService.getAllProductCategories(sort, page, size);
     
-        Link link = new Link(ServletUriComponentsBuilder.fromCurrentRequest()
-                                                        .build()
-                                                        .toUriString());
+        Link link = Link.of(ServletUriComponentsBuilder.fromCurrentRequest()
+                                                       .build()
+                                                       .toUriString());
 
         PagedModel<EntityModel<ProductCategory>> resource = assembler.toModel(list, link);
     

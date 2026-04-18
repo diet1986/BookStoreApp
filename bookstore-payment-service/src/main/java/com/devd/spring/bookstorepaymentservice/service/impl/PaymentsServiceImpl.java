@@ -18,7 +18,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TimeZone;
 
 import static com.devd.spring.bookstorecommons.util.CommonUtilityMethods.getUserIdFromToken;
@@ -50,19 +49,26 @@ public class PaymentsServiceImpl implements PaymentsService {
             PaymentIntent paymentIntent = PaymentIntent.create(params);
             CreatePaymentResponse createPaymentResponse = new CreatePaymentResponse();
 
-            Optional<Charge> paidRecord = paymentIntent.getCharges().getData().stream().filter(Charge::getPaid).findAny();
+            // Stripe SDK 20+ removed getCharges() - use getLatestCharge() instead
+            // Retrieve the charge directly from the PaymentIntent's latest_charge field
+            String latestChargeId = paymentIntent.getLatestCharge();
 
-            if (paidRecord.isPresent()) {
-                createPaymentResponse.setPaymentId(paidRecord.get().getId());
-                LocalDateTime paymentTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(paidRecord.get().getCreated()), TimeZone.getDefault().toZoneId());
-                createPaymentResponse.setPaymentDate(paymentTime);
-                createPaymentResponse.setCaptured(true);
-                createPaymentResponse.setReceipt_url(paidRecord.get().getReceiptUrl());
-                return createPaymentResponse;
-            } else {
-                createPaymentResponse.setCaptured(false);
-                return createPaymentResponse;
+            if (latestChargeId != null) {
+                Charge charge = Charge.retrieve(latestChargeId);
+                if (charge.getPaid()) {
+                    createPaymentResponse.setPaymentId(charge.getId());
+                    LocalDateTime paymentTime = LocalDateTime.ofInstant(
+                        Instant.ofEpochMilli(charge.getCreated()),
+                        TimeZone.getDefault().toZoneId());
+                    createPaymentResponse.setPaymentDate(paymentTime);
+                    createPaymentResponse.setCaptured(true);
+                    createPaymentResponse.setReceipt_url(charge.getReceiptUrl());
+                    return createPaymentResponse;
+                }
             }
+
+            createPaymentResponse.setCaptured(false);
+            return createPaymentResponse;
 
         } catch (StripeException e) {
             e.printStackTrace();

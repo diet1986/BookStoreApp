@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -66,6 +67,7 @@ public class OrderServiceImpl implements OrderService {
     PaymentFeignClient paymentFeignClient;
 
     @Override
+    @Transactional
     public CreateOrderResponse createOrder(CreateOrderRequest createOrderRequest) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -198,6 +200,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public PreviewOrderResponse previewOrder(PreviewOrderRequest previewOrderRequest) {
 
         PreviewOrderResponse previewOrderResponse = new PreviewOrderResponse();
@@ -257,6 +260,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public CreateOrderResponse getOrderById(String orderId) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userIdFromToken = CommonUtilityMethods.getUserIdFromToken(authentication);
@@ -304,6 +308,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public List<CreateOrderResponse> getMyOrders() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String userIdFromToken = CommonUtilityMethods.getUserIdFromToken(authentication);
@@ -313,6 +318,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
     public List<CreateOrderResponse> getAllOrders() {
         Iterable<Order> order = orderRepository.findAll();
 

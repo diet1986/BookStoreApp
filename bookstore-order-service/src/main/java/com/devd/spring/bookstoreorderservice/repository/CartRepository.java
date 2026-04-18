@@ -3,7 +3,7 @@ package com.devd.spring.bookstoreorderservice.repository;
 import com.devd.spring.bookstoreorderservice.repository.dao.Cart;
 import org.springframework.data.repository.CrudRepository;
 
-import javax.transaction.Transactional;
+import jakarta.transaction.Transactional;
 import java.util.Optional;
 
 /**

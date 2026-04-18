@@ -3,7 +3,7 @@ package com.devd.spring.bookstorecatalogservice.service;
 import com.devd.spring.bookstorecatalogservice.repository.dao.ProductCategory;
 import com.devd.spring.bookstorecatalogservice.web.CreateProductCategoryRequest;
 import com.devd.spring.bookstorecatalogservice.web.UpdateProductCategoryRequest;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 
 /**

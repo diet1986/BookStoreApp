@@ -32,7 +32,8 @@ class SpringSecurityAuditAwareImpl implements AuditorAware<String> {
             return Optional.empty();
         }
 
-        String userPrincipal = (String)authentication.getPrincipal();
+        // Spring Security 6 JWT: getName() returns the 'sub' claim (username)
+        String userPrincipal = authentication.getName();
 
         return Optional.ofNullable(userPrincipal);
     }

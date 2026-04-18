@@ -1,20 +1,18 @@
 package com.devd.spring.bookstoreaccountservice;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringRunner;
 
 /**
- * @author: Devaraj Reddy,
- * Date : 2019-05-16
+ * Migrated from JUnit 4 to JUnit 5 (Jupiter).
+ * Spring Boot 3 dropped JUnit 4 support - @RunWith replaced by @ExtendWith
+ * which @SpringBootTest includes automatically.
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest
 public class BookstoreAccountServiceApplicationTests {
 
-	@Test
-	public void contextLoads() {
-	}
+    @Test
+    public void contextLoads() {
+    }
 
 }

@@ -7,7 +7,7 @@ import com.devd.spring.bookstoreaccountservice.web.GetUserResponse;
 import java.net.URI;
 import java.util.List;
 import java.util.Optional;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 
 import com.devd.spring.bookstoreaccountservice.web.UpdateUserRequest;
 import com.devd.spring.bookstoreaccountservice.web.UpdateUserRequestFromAdmin;

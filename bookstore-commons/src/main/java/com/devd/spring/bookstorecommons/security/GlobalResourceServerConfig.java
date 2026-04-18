@@ -1,122 +1,123 @@
 package com.devd.spring.bookstorecommons.security;
 
-import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.Resource;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.config.annotation.web.configuration.EnableResourceServer;
-import org.springframework.security.oauth2.config.annotation.web.configuration.ResourceServerConfigurerAdapter;
-import org.springframework.security.oauth2.provider.OAuth2Authentication;
-import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
-import org.springframework.security.oauth2.provider.token.TokenStore;
-import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
-import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.web.SecurityFilterChain;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
-import static org.apache.commons.lang.CharEncoding.UTF_8;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
 /**
- * @author: Devaraj Reddy,
- * Date : 2019-06-30
+ * Global resource server security config shared by all microservices.
+ * Replaces the legacy @EnableResourceServer / ResourceServerConfigurerAdapter
+ * from spring-security-oauth2 (EOL May 2022).
+ *
+ * Uses Spring Security 6 native JWT resource server support.
  */
-
 @Configuration
-@EnableResourceServer
-public class GlobalResourceServerConfig extends ResourceServerConfigurerAdapter {
+@EnableWebSecurity
+public class GlobalResourceServerConfig {
 
     @Value("${security.jwt.public-key}")
-    private Resource publicKey;
+    private Resource publicKeyResource;
 
-    @Override
-    public void configure(HttpSecurity http) throws Exception {
+    /**
+     * Main security filter chain.
+     * - Stateless (no session)
+     * - CORS enabled via SimpleCorsFilter bean
+     * - Permits actuator, h2-console, signup, signin endpoints
+     * - All other requests require a valid JWT Bearer token
+     */
+    @Bean
+    @Order(3)
+    public SecurityFilterChain resourceServerSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors()
-                .and()
-                .headers()
-                .frameOptions()
-                .disable()
-                .and()
-                .requestMatchers()
-                .and()
-                .authorizeRequests()
-                .antMatchers("/actuator/**", "/api-docs/**", "/h2-console/**", "/signin", "/signup").permitAll()
-                .antMatchers(HttpMethod.POST, "/oauth/token").permitAll()
-                .antMatchers("/**").authenticated();
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configure(http))
+            .headers(headers -> headers.frameOptions(frame -> frame.disable()))
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(
+                    "/actuator/**",
+                    "/api-docs/**",
+                    "/swagger-ui/**",
+                    "/swagger-ui.html",
+                    "/v3/api-docs/**",
+                    "/h2-console/**",
+                    "/signin",
+                    "/signup"
+                ).permitAll()
+                .requestMatchers(HttpMethod.POST, "/oauth2/token").permitAll()
+                .anyRequest().authenticated()
+            )
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt
+                    .decoder(jwtDecoder())
+                    .jwtAuthenticationConverter(jwtAuthenticationConverter())
+                )
+            );
+
+        return http.build();
     }
 
-
+    /**
+     * Decodes and validates JWT tokens using the RSA public key.
+     * The public key is shared from the account-service (Authorization Server).
+     */
     @Bean
-    @Primary
-    public DefaultTokenServices tokenServices(final TokenStore tokenStore) {
-        DefaultTokenServices tokenServices = new DefaultTokenServices();
-        tokenServices.setTokenStore(tokenStore);
-        return tokenServices;
-    }
-
-    @Bean
-    @Primary
-    public TokenStore tokenStore() {
-        return new JwtTokenStore(jwtAccessTokenConverter());
-    }
-
-    @Bean
-    public JwtAccessTokenConverter jwtAccessTokenConverter() {
-        JwtAccessTokenConverter converter = new JwtAccessTokenConverter() {
-//            @Override
-//            public OAuth2AccessToken enhance(OAuth2AccessToken accessToken, OAuth2Authentication authentication) {
-//                if (authentication.getOAuth2Request().getGrantType().equalsIgnoreCase("password")) {
-//                    OAuth2AuthenticationDetails auth2AuthenticationDetails = (OAuth2AuthenticationDetails) authentication.getDetails();
-//                    Map<String, Object> additionalInformation = tokenStore().readAccessToken(auth2AuthenticationDetails.getTokenValue()).getAdditionalInformation();
-//                    String user_id = (String) additionalInformation.get("user_id");
-//                    final Map<String, Object> additionalInfo = new HashMap<>();
-//                    additionalInfo.put("user_id", user_id);
-//                    ((DefaultOAuth2AccessToken) accessToken)
-//                            .setAdditionalInformation(additionalInfo);
-//                }
-//                accessToken = super.enhance(accessToken, authentication);
-//                ((DefaultOAuth2AccessToken) accessToken).setAdditionalInformation(new HashMap<>());
-//                return accessToken;
-//            }
-
-            @Override
-            public OAuth2Authentication extractAuthentication(Map<String, ?> map) {
-                OAuth2Authentication authentication = super.extractAuthentication(map);
-                Authentication userAuthentication = authentication.getUserAuthentication();
-
-                if (userAuthentication != null) {
-                    String userId = (String) map.get("user_id");
-                    String userName = (String) map.get("user_name");
-                    if (userName != null) {
-                        Map<String, String> extendedPrincipal = new HashMap<>();
-                        extendedPrincipal.put("user_id", userId);
-                        extendedPrincipal.put("user_name", userName);
-                        ((UsernamePasswordAuthenticationToken) userAuthentication).setDetails(extendedPrincipal);
-                    }
-                }
-                return new OAuth2Authentication(authentication.getOAuth2Request(), userAuthentication);
-            }
-        };
-        String publicKeyAsString = getPublicKeyAsString();
-        converter.setVerifierKey(publicKeyAsString);
-        return converter;
-    }
-
-    private String getPublicKeyAsString() {
+    public JwtDecoder jwtDecoder() {
         try {
-            return IOUtils.toString(publicKey.getInputStream(), UTF_8);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            RSAPublicKey publicKey = loadPublicKey();
+            return NimbusJwtDecoder.withPublicKey(publicKey).build();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to load JWT public key", e);
         }
     }
 
+    /**
+     * Converts JWT claims to Spring Security authorities.
+     * Maps the 'authorities' claim from the token to GrantedAuthority objects.
+     */
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
+        authoritiesConverter.setAuthoritiesClaimName("authorities");
+        authoritiesConverter.setAuthorityPrefix("");
+
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(authoritiesConverter);
+        return converter;
+    }
+
+    private RSAPublicKey loadPublicKey() throws Exception {
+        String key;
+        try (var inputStream = publicKeyResource.getInputStream()) {
+            key = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+        }
+        // Strip PEM headers if present
+        key = key.replace("-----BEGIN PUBLIC KEY-----", "")
+                 .replace("-----END PUBLIC KEY-----", "")
+                 .replaceAll("\\s", "");
+
+        byte[] decoded = Base64.getDecoder().decode(key);
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(decoded);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return (RSAPublicKey) kf.generatePublic(spec);
+    }
 }

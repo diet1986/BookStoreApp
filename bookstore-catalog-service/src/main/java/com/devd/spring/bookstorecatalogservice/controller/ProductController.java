@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import java.net.URI;
 
 /**
@@ -86,8 +86,9 @@ public class ProductController {
 
         Page<ProductResponse> list = productService.getAllProducts(sort, page, size);
     
-        Link link = new Link(ServletUriComponentsBuilder.fromCurrentRequest().build()
-                                                        .toUriString());
+        // Link(String) constructor removed in Spring HATEOAS 2.x - use Link.of()
+        Link link = Link.of(ServletUriComponentsBuilder.fromCurrentRequest().build()
+                                                       .toUriString());
 
         PagedModel<EntityModel<ProductResponse>> resource = assembler.toModel(list, link);
     

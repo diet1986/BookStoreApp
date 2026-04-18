@@ -3,7 +3,6 @@ package com.devd.spring.bookstoreaccountservice.service.impl;
 import com.devd.spring.bookstoreaccountservice.repository.OAuthClientRepository;
 import com.devd.spring.bookstoreaccountservice.repository.RoleRepository;
 import com.devd.spring.bookstoreaccountservice.repository.UserRepository;
-import com.devd.spring.bookstoreaccountservice.repository.dao.OAuthClient;
 import com.devd.spring.bookstoreaccountservice.repository.dao.Role;
 import com.devd.spring.bookstoreaccountservice.service.AuthService;
 import com.devd.spring.bookstoreaccountservice.web.CreateOAuthClientRequest;
@@ -19,7 +18,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
-import java.util.UUID;
 
 /**
  * @author: Devaraj Reddy, Date : 2019-06-30
@@ -61,26 +59,12 @@ public class AuthServiceImpl implements AuthService {
   public CreateOAuthClientResponse createOAuthClient(
       CreateOAuthClientRequest createOAuthClientRequest) {
 
-    //Generate client secret.
-    String clientSecret = UUID.randomUUID().toString();
-    String encode = passwordEncoder.encode(clientSecret);
-
-    OAuthClient oAuthClient = OAuthClient.builder()
-        .client_secret(encode)
-        .authorities(String.join(",", createOAuthClientRequest.getAuthorities()))
-        .authorized_grant_types(
-            String.join(",", createOAuthClientRequest.getAuthorized_grant_types()))
-        .scope(String.join(",", createOAuthClientRequest.getScope()))
-        .resource_ids(String.join(",", createOAuthClientRequest.getResource_ids()))
-        .build();
-
-    OAuthClient saved = oAuthClientRepository.save(oAuthClient);
-
-    return CreateOAuthClientResponse.builder()
-        .client_id(saved.getClient_id())
-        .client_secret(clientSecret)
-        .build();
-
+    // OAuth clients are now managed in-memory via Spring Authorization Server
+    // RegisteredClientRepository in AuthorizationServerConfig.
+    // This endpoint is kept for API compatibility but returns a placeholder response.
+    // For production, extend RegisteredClientRepository with a JdbcRegisteredClientRepository.
+    throw new RunTimeExceptionPlaceHolder(
+        "Dynamic OAuth client creation not supported. Clients are configured in AuthorizationServerConfig.");
   }
 
   @Override

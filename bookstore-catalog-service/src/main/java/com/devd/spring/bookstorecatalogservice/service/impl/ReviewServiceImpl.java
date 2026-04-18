@@ -1,11 +1,10 @@
 package com.devd.spring.bookstorecatalogservice.service.impl;
 
+import com.devd.spring.bookstorecatalogservice.repository.ProductRepository;
 import com.devd.spring.bookstorecatalogservice.repository.ReviewRepository;
 import com.devd.spring.bookstorecatalogservice.repository.dao.Review;
-import com.devd.spring.bookstorecatalogservice.service.ProductService;
 import com.devd.spring.bookstorecatalogservice.service.ReviewService;
 import com.devd.spring.bookstorecatalogservice.web.CreateOrUpdateReviewRequest;
-import com.devd.spring.bookstorecatalogservice.web.ProductResponse;
 import com.devd.spring.bookstorecommons.feign.AccountFeignClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
@@ -29,10 +28,10 @@ public class ReviewServiceImpl implements ReviewService {
     ReviewRepository reviewRepository;
 
     @Autowired
-    AccountFeignClient accountFeignClient;
+    ProductRepository productRepository;
 
     @Autowired
-    ProductService productService;
+    AccountFeignClient accountFeignClient;
 
     @Override
     public void createOrUpdateReview(CreateOrUpdateReviewRequest createOrUpdateReviewRequest) {
@@ -40,11 +39,9 @@ public class ReviewServiceImpl implements ReviewService {
         String userIdFromToken = getUserIdFromToken(authentication);
         String userNameFromToken = getUserNameFromToken(authentication);
 
-        //check whether product exists.
-        ProductResponse product = productService.getProduct(createOrUpdateReviewRequest.getProductId());
-        if (product == null) {
-            throw new RuntimeException("Product doesn't exist!");
-        }
+        // Check whether product exists directly via repository - avoids circular dependency
+        productRepository.findById(createOrUpdateReviewRequest.getProductId())
+            .orElseThrow(() -> new RuntimeException("Product doesn't exist!"));
 
         Optional<Review> review = reviewRepository.findByUserIdAndProductId(userIdFromToken, createOrUpdateReviewRequest.getProductId());
 

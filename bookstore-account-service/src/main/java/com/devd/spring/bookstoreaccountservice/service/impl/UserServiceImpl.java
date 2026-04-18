@@ -139,7 +139,8 @@ public class UserServiceImpl implements UserService {
   @Override
   public GetUserInfoResponse getUserInfo() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    String userName = (String) authentication.getPrincipal();
+    // Spring Security 6 JWT: getName() returns the 'sub' claim (username)
+    String userName = authentication.getName();
 
     GetUserResponse userByUserName = getUserByUserName(userName);
 
@@ -157,7 +158,8 @@ public class UserServiceImpl implements UserService {
   public void updateUserInfo(UpdateUserRequest updateUserRequest) {
 
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    String userName = (String) authentication.getPrincipal();
+    // Spring Security 6 JWT: getName() returns the 'sub' claim (username)
+    String userName = authentication.getName();
 
     Optional<User> userNameOrEmailOptional = userRepository.findByUserNameOrEmail(userName, userName);
 
@@ -185,7 +187,8 @@ public class UserServiceImpl implements UserService {
   @Override
   public void deleteUserById(String userId) {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    String userName = (String) authentication.getPrincipal();
+    // Spring Security 6 JWT: getName() returns the 'sub' claim (username)
+    String userName = authentication.getName();
     GetUserResponse userByUserId = getUserByUserId(userId);
 
     if(userName.equals(userByUserId.getUserName())){

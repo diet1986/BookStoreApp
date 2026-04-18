@@ -3,7 +3,7 @@ package com.devd.spring.bookstoreaccountservice.controller;
 import com.devd.spring.bookstoreaccountservice.service.UserRoleService;
 import com.devd.spring.bookstoreaccountservice.web.MapRoleToUsersRequest;
 import com.devd.spring.bookstoreaccountservice.web.MapUserToRolesRequest;
-import javax.validation.Valid;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;

@@ -4,55 +4,135 @@ server:
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
-  zipkin:
-    base-url: http://${ZIPKIN_HOST:localhost:9411}
-    enabled: true
-    service:
-      name: bookstore-api-gateway-service
-    message-timeout: 10
-  sleuth:
-    sampler:
-      probability: 1.0
+  application:
+    name: bookstore-api-gateway-service
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  # Spring Cloud Gateway MVC routes (replaces Zuul)
+  # lb:// prefix uses Spring Cloud LoadBalancer with service discovery
+  cloud:
+    gateway:
+      mvc:
+        routes:
+          - id: account-service
+            uri: lb://bookstore-account-service
+            predicates:
+              - Path=/api/account/**
+            filters:
+              - StripPrefix=2
 
-zuul:
-  sensitiveHeaders:
-  host:
-    socket-timeout-millis: 30000
-    connect-timeout-millis: 30000
-  prefix: /api
-  routes:
-    billing:
-      path: /billing/**
-      serviceId: bookstore-billing-service
-    catalog:
-      path: /catalog/**
-      serviceId: bookstore-catalog-service
-    account:
-      path: /account/**
-      serviceId: bookstore-account-service
-    order:
-      path: /order/**
-      serviceId: bookstore-order-service
-    payment:
-      path: /payment/**
-      serviceId: bookstore-payment-service
-  ribbon:
-    eager-load:
+          - id: catalog-service
+            uri: lb://bookstore-catalog-service
+            predicates:
+              - Path=/api/catalog/**
+            filters:
+              - StripPrefix=2
+
+          - id: order-service
+            uri: lb://bookstore-order-service
+            predicates:
+              - Path=/api/order/**
+            filters:
+              - StripPrefix=2
+
+          - id: billing-service
+            uri: lb://bookstore-billing-service
+            predicates:
+              - Path=/api/billing/**
+            filters:
+              - StripPrefix=2
+
+          - id: payment-service
+            uri: lb://bookstore-payment-service
+            predicates:
+              - Path=/api/payment/**
+            filters:
+              - StripPrefix=2
+
+# Micrometer Tracing
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://${ZIPKIN_HOST:localhost}:${ZIPKIN_PORT:9411}/api/v2/spans
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  metrics:
+    tags:
+      application: bookstore-api-gateway-service
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    com.devd.spring.*: DEBUG
+
+---
+# Local profile - Eureka discovery
+spring:
+  config:
+    activate:
+      on-profile: local
+  autoconfigure:
+    exclude:
+      - org.springframework.cloud.consul.serviceregistry.ConsulAutoServiceRegistrationAutoConfiguration
+      - org.springframework.cloud.consul.serviceregistry.ConsulServiceRegistryAutoConfiguration
+      - org.springframework.cloud.consul.discovery.ConsulDiscoveryClientConfiguration
+  cloud:
+    consul:
+      enabled: false
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:localhost}:${EUREKA_PORT:8761}/eureka/
+    registerWithEureka: true
+    enabled: true
+  instance:
+    prefer-ip-address: false
+
+---
+# Docker profile - Consul discovery
+spring:
+  config:
+    activate:
+      on-profile: docker
+  cloud:
+    consul:
+      host: ${CONSUL_HOST:bookstore-consul-discovery}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        instanceId: ${spring.application.name}:${random.value}
       enabled: true
-  ribbon-isolation-strategy: THREAD
 
-ribbon:
-  ConnectTimeout: 10000
-  ReadTimeout: 60000
+eureka:
+  client:
+    enabled: false
 
-hystrix:
-  command:
-    default:
-      execution:
-        isolation:
-          thread:
-            timeoutInMilliseconds: 40000
+---
+# Kubernetes / AWS profile - Consul or K8s DNS discovery
+spring:
+  config:
+    activate:
+      on-profile: kubernetes
+  cloud:
+    consul:
+      host: ${CONSUL_HOST:consul}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        instanceId: ${spring.application.name}:${random.value}
+        prefer-ip-address: true
+      enabled: true
+
+eureka:
+  client:
+    enabled: false

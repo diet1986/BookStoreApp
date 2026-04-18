@@ -4,7 +4,7 @@ import com.devd.spring.bookstoreorderservice.repository.dao.CartItem;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.CrudRepository;
 
-import javax.transaction.Transactional;
+import jakarta.transaction.Transactional;
 import java.util.Optional;
 
 /**

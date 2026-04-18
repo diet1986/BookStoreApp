@@ -3,7 +3,7 @@ package com.devd.spring.bookstoreaccountservice.config;
 import feign.RequestInterceptor;
 import feign.RequestTemplate;
 import java.util.Objects;
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;

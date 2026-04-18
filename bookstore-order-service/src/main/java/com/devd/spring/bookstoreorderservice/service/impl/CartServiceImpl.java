@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -23,10 +24,11 @@ public class CartServiceImpl implements CartService {
     private CartRepository cartRepository;
 
     @Override
+    @Transactional
     public Cart getCart() {
     
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userName = (String) authentication.getPrincipal();
+        String userName = authentication.getName();
     
         Cart cartByUserName = cartRepository.findCartByUserName(userName);
 
@@ -58,7 +60,7 @@ public class CartServiceImpl implements CartService {
 
         //Get the userName from the token.
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String userName = (String) authentication.getPrincipal();
+        String userName = authentication.getName();
 
         Cart cartByUserName = cartRepository.findCartByUserName(userName);
 
