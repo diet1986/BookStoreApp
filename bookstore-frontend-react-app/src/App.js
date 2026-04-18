@@ -18,14 +18,11 @@ import OrderScreen from './screens/OrderScreen';
 import ProductListScreen from './screens/ProductListScreen';
 import ProductEditScreen from './screens/ProductEditScreen';
 import ProductCreateScreen from './screens/ProductCreateScreen';
-import { createBrowserHistory } from 'history';
 import OrderListScreen from './screens/OrderListScreen';
-
-export const history = createBrowserHistory();
 
 function App() {
   return (
-    <BrowserRouter history={history}>
+    <BrowserRouter>
       <Header></Header>
       <main className='py-3'>
         <Container>

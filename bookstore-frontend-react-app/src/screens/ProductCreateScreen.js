@@ -25,10 +25,13 @@ const ProductCreateScreen = ({ match, history }) => {
   const productDetails = useSelector((state) => state.productDetails);
   const { loading, error, product } = productDetails;
 
-  useEffect(async () => {
-    await getProductCategories().then((res) => {
-      setProductCategories(res.page.content);
-    });
+  useEffect(() => {
+    const fetchCategories = async () => {
+      await getProductCategories().then((res) => {
+        setProductCategories(res.page.content);
+      });
+    };
+    fetchCategories();
   }, [dispatch, history, productId, product]);
 
   const uploadFileHandler = async (e) => {

@@ -43,7 +43,7 @@ const HomeScreen = () => {
               nextLabel={'Next'}
               breakLabel={'...'}
               breakClassName={'break-me'}
-              pageCount={pageResponse?.totalPages}
+              pageCount={Math.ceil(pageResponse?.totalPages) || 0}
               marginPagesDisplayed={50}
               pageRangeDisplayed={10}
               onPageChange={(e) => handlePageClick(e)}

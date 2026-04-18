@@ -25,26 +25,29 @@ const UserEditScreen = ({ match, history }) => {
 
   const [checkedItems, setCheckedItems] = useState(new Map());
 
-  useEffect(async () => {
-    if (successUpdate) {
-      dispatch({ type: USER_UPDATE_RESET });
-      history.push('/admin/userlist');
-    } else {
-      if (!user.userName || user.userId !== userId) {
-        dispatch(getUserDetails(userId));
+  useEffect(() => {
+    const fetchData = async () => {
+      if (successUpdate) {
+        dispatch({ type: USER_UPDATE_RESET });
+        history.push('/admin/userlist');
       } else {
-        setFirstName(user.firstName);
-        setLastName(user.lastName);
-        setEmail(user.email);
-        user.roles.forEach((role) => {
-          checkedItems.set(role.roleName, true);
-          setCheckedItems(new Map(checkedItems));
-        });
+        if (!user.userName || user.userId !== userId) {
+          dispatch(getUserDetails(userId));
+        } else {
+          setFirstName(user.firstName);
+          setLastName(user.lastName);
+          setEmail(user.email);
+          user.roles.forEach((role) => {
+            checkedItems.set(role.roleName, true);
+            setCheckedItems(new Map(checkedItems));
+          });
+        }
       }
-    }
-    await getAllRolesApi().then((roles) => {
-      setRoles(roles);
-    });
+      await getAllRolesApi().then((roles) => {
+        setRoles(roles);
+      });
+    };
+    fetchData();
   }, [dispatch, history, userId, user, successUpdate]);
 
   const handleChange = (event) => {

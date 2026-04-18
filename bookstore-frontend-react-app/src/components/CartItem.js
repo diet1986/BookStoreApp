@@ -16,14 +16,17 @@ const CartItem = ({ item, addToCart }) => {
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
 
-  useEffect(async () => {
-    try {
-      const productDetail = await getProductDetailApi(item.productId);
-      setProduct(productDetail);
-      setLoading(false);
-    } catch (err) {
-      setError(getErrorMessage(err));
-    }
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const productDetail = await getProductDetailApi(item.productId);
+        setProduct(productDetail);
+        setLoading(false);
+      } catch (err) {
+        setError(getErrorMessage(err));
+      }
+    };
+    fetchProduct();
   }, [item]);
 
   const removeFromCartHandler = async (cartItemId) => {

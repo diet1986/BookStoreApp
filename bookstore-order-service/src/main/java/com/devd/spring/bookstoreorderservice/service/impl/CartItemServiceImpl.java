@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +39,7 @@ public class CartItemServiceImpl implements CartItemService {
     AccountFeignClient accountFeignClient;
 
     @Override
+    @Transactional
     public void addCartItem(CartItemRequest cartItemRequest) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -99,6 +101,7 @@ public class CartItemServiceImpl implements CartItemService {
     }
 
     @Override
+    @Transactional
     public void removeAllCartItems(String cartId) {
 
         Cart cart = cartService.getCartByCartId(cartId);

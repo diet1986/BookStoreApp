@@ -30,18 +30,17 @@ const ProductScreen = (props) => {
   const productReviewCreate = useSelector((state) => state.productReviewCreate);
   const { success: successProductReview, loading: loadingProductReview, error: errorProductReview } = productReviewCreate;
 
-  useEffect(async () => {
-    // setProductimageBase64(null);
-    // dispatch(listProductDetailsAction(props.match.params.id));
-    await getProductDetailApi(props.match.params.id).then((r) => {
-      setProduct(r);
-    });
-    dispatch(listProductReviewsAction(props.match.params.id));
-    // if (product?.imageId) {
-    await getImageApi(product?.imageId).then((r) => {
-      setProductimageBase64(r);
-    });
-    // }
+  useEffect(() => {
+    const fetchProduct = async () => {
+      await getProductDetailApi(props.match.params.id).then((r) => {
+        setProduct(r);
+      });
+      dispatch(listProductReviewsAction(props.match.params.id));
+      await getImageApi(product?.imageId).then((r) => {
+        setProductimageBase64(r);
+      });
+    };
+    fetchProduct();
   }, [dispatch, product?.imageId]);
 
   const addToCartHandler = () => {

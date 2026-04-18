@@ -46,8 +46,12 @@ public class CorsFilter implements Filter {
 
             // Wrap response - blocks downstream CORS headers, allows our own
             BlockingCorsResponseWrapper wrapper = new BlockingCorsResponseWrapper(response, origin);
-            chain.doFilter(request, wrapper);
-            // Ensure headers are set (wrapper handles this)
+            try {
+                chain.doFilter(request, wrapper);
+            } finally {
+                // Always set CORS headers - even on errors/exceptions
+                wrapper.ensureCorsHeaders();
+            }
         } else {
             chain.doFilter(request, response);
         }
