@@ -113,7 +113,7 @@ npm start --prefix bookstore-frontend-react-app
 | Username | Password | Role |
 |---|---|---|
 | `admin.admin` | `admin.devd123` | ADMIN_USER, STANDARD_USER |
-| `devd.cores` | `devd.cores123` | STANDARD_USER |
+| `deepak.srivastav` | `cores.devd123` | STANDARD_USER |
 
 ---
 
