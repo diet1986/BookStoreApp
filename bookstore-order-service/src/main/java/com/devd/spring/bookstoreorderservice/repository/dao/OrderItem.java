@@ -17,7 +17,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 /**
- * @author: Devaraj Reddy,
+ * @author: Deepak Srivastav,
  * Date : 2019-09-18
  */
 @Entity

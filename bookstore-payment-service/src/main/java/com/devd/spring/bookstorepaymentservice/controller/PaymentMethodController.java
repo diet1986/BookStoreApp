@@ -17,7 +17,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 
 /**
- * @author Devaraj Reddy, Date : 25-Jul-2020
+ * @author Deepak Srivastav, Date : 25-Jul-2020
  */
 @RestController
 @Slf4j

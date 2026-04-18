@@ -15,7 +15,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 
 /**
- * @author Devaraj Reddy, Date : 08-Nov-2020
+ * @author Deepak Srivastav, Date : 08-Nov-2020
  */
 @RestController
 public class ReviewController {

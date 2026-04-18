@@ -30,7 +30,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-06-30
+ * @author: Deepak Srivastav, Date : 2019-06-30
  */
 @Service
 public class UserServiceImpl implements UserService {

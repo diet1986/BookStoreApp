@@ -21,7 +21,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 /**
- * @author: Devaraj Reddy,
+ * @author: Deepak Srivastav,
  * Date : 2019-06-04
  */
 @EqualsAndHashCode(callSuper = true)

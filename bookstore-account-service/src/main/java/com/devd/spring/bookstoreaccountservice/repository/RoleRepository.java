@@ -6,7 +6,7 @@ import java.util.Optional;
 import org.springframework.data.repository.CrudRepository;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-05-17
+ * @author: Deepak Srivastav, Date : 2019-05-17
  */
 public interface RoleRepository extends CrudRepository<Role, Long> {
 

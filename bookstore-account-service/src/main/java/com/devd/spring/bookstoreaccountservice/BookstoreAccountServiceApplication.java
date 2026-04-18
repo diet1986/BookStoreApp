@@ -9,7 +9,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.FilterType;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-05-16
+ * @author: Deepak Srivastav, Date : 2019-05-16
  */
 @SpringBootApplication
 @ComponentScan(basePackages = {"com.devd.spring"}, excludeFilters = {

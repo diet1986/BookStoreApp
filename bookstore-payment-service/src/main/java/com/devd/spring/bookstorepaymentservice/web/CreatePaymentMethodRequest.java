@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.NotNull;
 
 /**
- * @author Devaraj Reddy, Date : 25-Jul-2020
+ * @author Deepak Srivastav, Date : 25-Jul-2020
  */
 @Data
 @AllArgsConstructor

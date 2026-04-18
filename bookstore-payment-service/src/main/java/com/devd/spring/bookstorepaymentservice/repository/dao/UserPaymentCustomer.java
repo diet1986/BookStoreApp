@@ -15,7 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * @author Devaraj Reddy, Date : 14-Dec-2020
+ * @author Deepak Srivastav, Date : 14-Dec-2020
  */
 @Getter
 @Setter

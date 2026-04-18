@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
 /**
- * @author: Devaraj Reddy,
+ * @author: Deepak Srivastav,
  * Date : 2019-06-03
  */
 @FeignClient("bookstore-catalog-service")

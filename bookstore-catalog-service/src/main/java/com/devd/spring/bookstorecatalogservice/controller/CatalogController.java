@@ -3,7 +3,7 @@ package com.devd.spring.bookstorecatalogservice.controller;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * @author: Devaraj Reddy,
+ * @author: Deepak Srivastav,
  * Date : 2019-06-03
  */
 @RestController

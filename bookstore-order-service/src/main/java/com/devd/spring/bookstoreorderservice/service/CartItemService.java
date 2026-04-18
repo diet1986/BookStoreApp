@@ -4,7 +4,7 @@ import com.devd.spring.bookstoreorderservice.repository.dao.CartItem;
 import com.devd.spring.bookstoreorderservice.web.CartItemRequest;
 
 /**
- * @author: Devaraj Reddy,
+ * @author: Deepak Srivastav,
  * Date : 2019-06-17
  */
 public interface CartItemService {

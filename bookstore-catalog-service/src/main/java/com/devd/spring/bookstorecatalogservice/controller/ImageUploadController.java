@@ -25,7 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * @author Devaraj Reddy - 21-Dec-2020
+ * @author Deepak Srivastav - 21-Dec-2020
  */
 /*
     Lot of improvement s can be done in image upload section.

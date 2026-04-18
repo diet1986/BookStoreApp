@@ -7,7 +7,7 @@ import com.devd.spring.bookstoreaccountservice.web.SignInRequest;
 import com.devd.spring.bookstoreaccountservice.web.SignUpRequest;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-09-27
+ * @author: Deepak Srivastav, Date : 2019-09-27
  */
 public interface AuthService {
 

@@ -10,7 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
 /**
- * @author Devaraj Reddy, Date : 06-Dec-2020
+ * @author Deepak Srivastav, Date : 06-Dec-2020
  */
 @Data
 @AllArgsConstructor

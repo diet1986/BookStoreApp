@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.NotBlank;
 
 /**
- * @author Devaraj Reddy - 17-Dec-2020
+ * @author Deepak Srivastav - 17-Dec-2020
  */
 @Data
 @AllArgsConstructor

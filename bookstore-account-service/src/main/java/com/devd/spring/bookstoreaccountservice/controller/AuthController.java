@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-05-18
+ * @author: Deepak Srivastav, Date : 2019-05-18
  */
 @RestController
 public class AuthController {

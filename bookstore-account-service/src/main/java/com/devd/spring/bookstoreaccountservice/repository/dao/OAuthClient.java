@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.GenericGenerator;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-05-18
+ * @author: Deepak Srivastav, Date : 2019-05-18
  */
 @Data
 @NoArgsConstructor

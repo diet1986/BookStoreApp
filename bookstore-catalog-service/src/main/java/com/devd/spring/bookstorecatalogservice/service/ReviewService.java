@@ -6,7 +6,7 @@ import com.devd.spring.bookstorecatalogservice.web.CreateOrUpdateReviewRequest;
 import java.util.List;
 
 /**
- * @author Devaraj Reddy, Date : 08-Nov-2020
+ * @author Deepak Srivastav, Date : 08-Nov-2020
  */
 public interface ReviewService {
 

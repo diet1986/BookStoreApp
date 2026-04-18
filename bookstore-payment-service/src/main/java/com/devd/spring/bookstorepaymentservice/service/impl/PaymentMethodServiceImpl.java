@@ -25,7 +25,7 @@ import static com.devd.spring.bookstorecommons.util.CommonUtilityMethods.getUser
 import static com.devd.spring.bookstorecommons.util.CommonUtilityMethods.getUserNameFromToken;
 
 /**
- * @author Devaraj Reddy, Date : 25-Jul-2020
+ * @author Deepak Srivastav, Date : 25-Jul-2020
  */
 @Service
 @Slf4j

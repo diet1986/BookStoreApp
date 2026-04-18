@@ -4,7 +4,7 @@ import com.devd.spring.bookstorecommons.exception.ErrorResponse;
 import lombok.Getter;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-06-30
+ * @author: Deepak Srivastav, Date : 2019-06-30
  */
 public class SuccessCodeWithErrorResponse extends RuntimeException {
 

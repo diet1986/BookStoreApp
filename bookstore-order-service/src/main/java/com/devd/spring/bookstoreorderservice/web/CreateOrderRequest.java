@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.NotBlank;
 
 /**
- * @author Devaraj Reddy, Date : 06-Dec-2020
+ * @author Deepak Srivastav, Date : 06-Dec-2020
  */
 @Data
 @NoArgsConstructor

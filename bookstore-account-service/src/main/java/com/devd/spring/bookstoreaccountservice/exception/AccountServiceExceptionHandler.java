@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-04-12 12:00
+ * @author: Deepak Srivastav, Date : 2019-04-12 12:00
  */
 @ControllerAdvice
 @Slf4j

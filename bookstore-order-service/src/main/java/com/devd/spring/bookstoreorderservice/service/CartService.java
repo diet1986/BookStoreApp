@@ -3,7 +3,7 @@ package com.devd.spring.bookstoreorderservice.service;
 import com.devd.spring.bookstoreorderservice.repository.dao.Cart;
 
 /**
- * @author: Devaraj Reddy,
+ * @author: Deepak Srivastav,
  * Date : 2019-06-17
  */
 public interface CartService {

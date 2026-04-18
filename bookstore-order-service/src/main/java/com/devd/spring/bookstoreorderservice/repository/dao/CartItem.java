@@ -18,7 +18,7 @@ import jakarta.persistence.PreRemove;
 import jakarta.persistence.Table;
 
 /**
- * @author: Devaraj Reddy,
+ * @author: Deepak Srivastav,
  * Date : 2019-06-17
  */
 

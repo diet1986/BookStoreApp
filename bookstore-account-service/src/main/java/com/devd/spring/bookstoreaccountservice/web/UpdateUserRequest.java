@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-06-30
+ * @author: Deepak Srivastav, Date : 2019-06-30
  */
 @Data
 @AllArgsConstructor

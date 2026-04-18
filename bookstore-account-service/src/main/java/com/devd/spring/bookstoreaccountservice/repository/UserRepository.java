@@ -10,7 +10,7 @@ import org.springframework.data.repository.CrudRepository;
 import jakarta.transaction.Transactional;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-05-17
+ * @author: Deepak Srivastav, Date : 2019-05-17
  */
 @Transactional
 public interface UserRepository extends CrudRepository<User, Long> {

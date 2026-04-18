@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * @author Devaraj Reddy, Date : 07-Nov-2020
+ * @author Deepak Srivastav, Date : 07-Nov-2020
  */
 @Repository
 public interface ReviewRepository extends JpaRepository<Review, String> {

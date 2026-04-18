@@ -16,7 +16,7 @@ import lombok.NonNull;
 import org.hibernate.annotations.GenericGenerator;
 
 /**
- * @author: Devaraj Reddy,
+ * @author: Deepak Srivastav,
  * Date : 2019-09-20
  */
 @Entity

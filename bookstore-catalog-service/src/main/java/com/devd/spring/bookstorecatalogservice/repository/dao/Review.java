@@ -17,7 +17,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
 /**
- * @author Devaraj Reddy, Date : 07-Nov-2020
+ * @author Deepak Srivastav, Date : 07-Nov-2020
  */
 @EqualsAndHashCode(callSuper = true)
 @Data

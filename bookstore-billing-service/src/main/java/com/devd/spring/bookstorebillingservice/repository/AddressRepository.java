@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * @author: Devaraj Reddy,
+ * @author: Deepak Srivastav,
  * Date : 2019-09-20
  */
 public interface AddressRepository extends CrudRepository<AddressDao, String> {

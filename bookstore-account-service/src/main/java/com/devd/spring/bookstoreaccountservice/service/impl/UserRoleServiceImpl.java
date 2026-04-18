@@ -20,7 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-07-01
+ * @author: Deepak Srivastav, Date : 2019-07-01
  */
 @Service
 public class UserRoleServiceImpl implements UserRoleService {

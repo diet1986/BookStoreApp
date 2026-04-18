@@ -11,7 +11,7 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.event.EventListener;
 
 /**
- * @author Devaraj Reddy, Date : 25-Jul-2020
+ * @author Deepak Srivastav, Date : 25-Jul-2020
  */
 @SpringBootApplication
 @ComponentScan(basePackages = {"com.devd.spring"})

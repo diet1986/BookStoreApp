@@ -9,7 +9,7 @@ import com.devd.spring.bookstoreaccountservice.web.UpdateUserRequestFromAdmin;
 import java.util.List;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-09-27
+ * @author: Deepak Srivastav, Date : 2019-09-27
  */
 public interface UserService {
 

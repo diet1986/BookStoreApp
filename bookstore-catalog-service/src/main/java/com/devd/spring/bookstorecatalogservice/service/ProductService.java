@@ -9,7 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 /**
- * @author: Devaraj Reddy, Date : 2019-09-27
+ * @author: Deepak Srivastav, Date : 2019-09-27
  */
 public interface ProductService {
 
