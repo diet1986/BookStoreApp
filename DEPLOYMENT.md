@@ -512,3 +512,325 @@ kubectl rollout undo deployment/bookstore-catalog-service -n bookstore
 | `OAUTH2_ISSUER_URI` | `http://localhost:4001` | JWT issuer URI |
 | `STRIPE_SECRET_KEY` | `sk_test_placeholder` | Stripe API key |
 | `JWT_KEYSTORE_PASSWORD` | `devdcorespass` | JWT keystore password |
+
+
+---
+
+## AWS EKS Networking — Deep Dive
+
+### VPC Architecture
+
+```
+AWS Region (us-east-1)
+└── VPC (10.0.0.0/16)
+    ├── Public Subnets (ALB, NAT Gateway)
+    │   ├── us-east-1a: 10.0.1.0/24
+    │   └── us-east-1b: 10.0.2.0/24
+    │
+    ├── Private Subnets (EKS Nodes, RDS)
+    │   ├── us-east-1a: 10.0.10.0/24
+    │   └── us-east-1b: 10.0.20.0/24
+    │
+    └── Internet Gateway → Public Subnets → NAT Gateway → Private Subnets
+```
+
+**Rule:** EKS worker nodes and RDS live in **private subnets** — never directly exposed to the internet. Only the ALB lives in public subnets.
+
+---
+
+### Traffic Flow — Step by Step
+
+```
+User Browser
+    │
+    │ HTTPS :443
+    ▼
+┌─────────────────────────────────────────┐
+│  AWS Application Load Balancer (ALB)    │  ← Public Subnet
+│  DNS: bookstore.yourdomain.com          │
+│  SSL termination here (ACM certificate) │
+└──────────────────┬──────────────────────┘
+                   │ HTTP :80 (internal)
+                   │ Routes:
+                   │  /api/* → API Gateway Service
+                   │  /*     → Frontend Service
+                   ▼
+┌─────────────────────────────────────────┐
+│  Kubernetes Ingress Controller          │  ← Private Subnet
+│  (AWS Load Balancer Controller)         │
+└──────────────────┬──────────────────────┘
+                   │
+        ┌──────────┴──────────┐
+        │                     │
+        ▼                     ▼
+┌──────────────┐    ┌──────────────────┐
+│  Frontend    │    │   API Gateway    │
+│  Service     │    │   Service        │
+│  ClusterIP   │    │   ClusterIP      │
+│  :80         │    │   :8765          │
+└──────┬───────┘    └────────┬─────────┘
+       │                     │
+       │              lb:// (Consul DNS)
+       │                     │
+       │         ┌───────────┼───────────┐
+       │         ▼           ▼           ▼
+       │  ┌──────────┐ ┌──────────┐ ┌──────────┐
+       │  │ Account  │ │ Catalog  │ │  Order   │
+       │  │ Service  │ │ Service  │ │  Service │
+       │  │ ClusterIP│ │ ClusterIP│ │ ClusterIP│
+       │  └────┬─────┘ └────┬─────┘ └────┬─────┘
+       │       │             │             │
+       └───────┴─────────────┴─────────────┘
+                             │
+                    ┌────────▼────────┐
+                    │   AWS RDS       │  ← Private Subnet
+                    │   MySQL 8       │
+                    │   Multi-AZ      │
+                    └─────────────────┘
+```
+
+---
+
+### Kubernetes Networking Layers
+
+#### Layer 1 — Pod Network (CNI)
+EKS uses **AWS VPC CNI** plugin. Each pod gets a real VPC IP address from the subnet CIDR.
+
+```
+Node 1 (10.0.10.5)
+├── Pod: account-service-abc  → IP: 10.0.10.20
+├── Pod: catalog-service-xyz  → IP: 10.0.10.21
+└── Pod: api-gateway-def      → IP: 10.0.10.22
+
+Node 2 (10.0.20.5)
+├── Pod: account-service-ghi  → IP: 10.0.20.20
+└── Pod: catalog-service-jkl  → IP: 10.0.20.21
+```
+
+Pods can talk to each other directly using their VPC IPs — no NAT needed.
+
+#### Layer 2 — Service Network (kube-proxy)
+Kubernetes Services get a stable **ClusterIP** from the service CIDR (e.g. `172.20.0.0/16`). kube-proxy maintains iptables rules to load balance traffic across pod IPs.
+
+```
+bookstore-account-service  → ClusterIP: 172.20.10.1  → Pods: 10.0.10.20, 10.0.20.20
+bookstore-catalog-service  → ClusterIP: 172.20.10.2  → Pods: 10.0.10.21, 10.0.20.21
+bookstore-api-gateway      → ClusterIP: 172.20.10.3  → Pods: 10.0.10.22
+```
+
+Services are resolved by DNS: `bookstore-account-service.bookstore.svc.cluster.local`
+
+#### Layer 3 — Ingress (ALB)
+The AWS Load Balancer Controller watches Ingress resources and creates/updates ALB target groups automatically.
+
+```yaml
+# How the Ingress maps to ALB target groups:
+/api/*  → Target Group: api-gateway pods (10.0.10.22, 10.0.20.x)
+/*      → Target Group: frontend pods   (10.0.10.x, 10.0.20.x)
+```
+
+---
+
+### Service Discovery in Kubernetes
+
+In the `kubernetes` profile, services use **Consul** for discovery (same as Docker). Consul runs as a StatefulSet in the cluster.
+
+```yaml
+# Consul StatefulSet
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: consul
+  namespace: bookstore
+spec:
+  replicas: 3                    # 3-node Consul cluster for HA
+  serviceName: consul
+  selector:
+    matchLabels:
+      app: consul
+  template:
+    spec:
+      containers:
+      - name: consul
+        image: hashicorp/consul:1.17
+        ports:
+        - containerPort: 8500    # HTTP API
+        - containerPort: 8600    # DNS
+        - containerPort: 8300    # Server RPC
+        - containerPort: 8301    # Serf LAN
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul-service
+  namespace: bookstore
+spec:
+  selector:
+    app: consul
+  ports:
+  - name: http
+    port: 8500
+    targetPort: 8500
+  clusterIP: None                # Headless service for StatefulSet
+```
+
+Each microservice registers with Consul on startup:
+```yaml
+spring.cloud.consul:
+  host: consul-service           # K8s DNS resolves to Consul pods
+  port: 8500
+  discovery:
+    instanceId: ${spring.application.name}:${random.value}
+    prefer-ip-address: true      # Register with pod IP, not hostname
+```
+
+The API Gateway resolves `lb://bookstore-catalog-service` by querying Consul, getting all healthy pod IPs, and round-robining requests.
+
+---
+
+### Security Groups
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  ALB Security Group                                      │
+│  Inbound:  0.0.0.0/0 → :443 (HTTPS)                    │
+│  Inbound:  0.0.0.0/0 → :80  (HTTP, redirect to HTTPS)  │
+│  Outbound: EKS Node SG → :8765, :80                    │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  EKS Node Security Group                                 │
+│  Inbound:  ALB SG → :8765, :80 (from ALB only)         │
+│  Inbound:  EKS Node SG → all ports (pod-to-pod)        │
+│  Outbound: 0.0.0.0/0 (via NAT Gateway)                 │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│  RDS Security Group                                      │
+│  Inbound:  EKS Node SG → :3306 (MySQL, from nodes only)│
+│  Outbound: none                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+### DNS Resolution Chain
+
+```
+Browser requests: https://bookstore.yourdomain.com/api/catalog/products
+
+1. DNS: bookstore.yourdomain.com → ALB DNS (Route53 CNAME)
+2. ALB: routes /api/* to API Gateway pod (10.0.10.22:8765)
+3. Gateway: resolves lb://bookstore-catalog-service via Consul
+4. Consul: returns [10.0.10.21, 10.0.20.21] (catalog pod IPs)
+5. Gateway: picks 10.0.10.21, forwards request
+6. Catalog pod: queries RDS at <rds-endpoint>:3306
+7. Response flows back through the same chain
+```
+
+---
+
+### Network Policies (Zero Trust)
+
+Restrict pod-to-pod communication to only what's needed:
+
+```yaml
+# k8s/network-policy.yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: catalog-service-policy
+  namespace: bookstore
+spec:
+  podSelector:
+    matchLabels:
+      app: bookstore-catalog-service
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # Only allow traffic from API Gateway
+  - from:
+    - podSelector:
+        matchLabels:
+          app: bookstore-api-gateway
+    ports:
+    - port: 6001
+  # Allow traffic from order-service (Feign calls)
+  - from:
+    - podSelector:
+        matchLabels:
+          app: bookstore-order-service
+    ports:
+    - port: 6001
+  egress:
+  # Allow MySQL
+  - to:
+    - ipBlock:
+        cidr: 10.0.0.0/16    # VPC CIDR (RDS)
+    ports:
+    - port: 3306
+  # Allow Consul
+  - to:
+    - podSelector:
+        matchLabels:
+          app: consul
+    ports:
+    - port: 8500
+```
+
+---
+
+### Complete K8s Manifest Deployment Order
+
+```bash
+# 1. Infrastructure
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/network-policy.yaml
+
+# 2. Service Discovery
+kubectl apply -f k8s/consul.yaml
+kubectl wait --for=condition=ready pod -l app=consul -n bookstore --timeout=120s
+
+# 3. Core Services (account first - others depend on JWT keys)
+kubectl apply -f k8s/account-service.yaml
+kubectl wait --for=condition=available deployment/bookstore-account-service -n bookstore --timeout=120s
+
+# 4. Business Services (parallel)
+kubectl apply -f k8s/catalog-service.yaml
+kubectl apply -f k8s/order-service.yaml
+kubectl apply -f k8s/billing-service.yaml
+kubectl apply -f k8s/payment-service.yaml
+
+# 5. Gateway (after all services registered in Consul)
+kubectl apply -f k8s/api-gateway.yaml
+
+# 6. Frontend
+kubectl apply -f k8s/frontend.yaml
+
+# 7. Ingress (last - exposes everything)
+kubectl apply -f k8s/ingress.yaml
+
+# Verify
+kubectl get all -n bookstore
+kubectl get ingress -n bookstore    # Get ALB URL
+```
+
+---
+
+### Port Reference
+
+| Service | Container Port | K8s Service Port | Exposed Via |
+|---|---|---|---|
+| Frontend | 80 | 80 | ALB Ingress |
+| API Gateway | 8765 | 8765 | ALB Ingress |
+| Account Service | 4001 | 4001 | ClusterIP only |
+| Catalog Service | 6001 | 6001 | ClusterIP only |
+| Order Service | 7001 | 7001 | ClusterIP only |
+| Billing Service | 5001 | 5001 | ClusterIP only |
+| Payment Service | 8001 | 8001 | ClusterIP only |
+| Consul | 8500 | 8500 | ClusterIP only |
+| Zipkin | 9411 | 9411 | ClusterIP only |
+| MySQL (RDS) | 3306 | N/A | RDS endpoint |
