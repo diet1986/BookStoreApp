@@ -3,7 +3,7 @@ package com.devd.spring.bookstoreaccountservice.web;
 import lombok.Value;
 
 /**
- * @author devaraj.reddy
+ * @author deepak.srivastav
  */
 @Value
 public class JwtAuthenticationResponse {
