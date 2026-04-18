@@ -20,7 +20,6 @@ import jakarta.validation.Valid;
  * @author: Devaraj Reddy, Date : 2019-05-18
  */
 @RestController
-@CrossOrigin
 public class AuthController {
 
   @Autowired

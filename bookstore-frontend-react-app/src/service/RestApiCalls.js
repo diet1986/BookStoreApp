@@ -9,6 +9,11 @@ axios.interceptors.response.use(
   (error) => {
     const originalRequest = error.config;
 
+    // No response means network error - just reject
+    if (!error.response) {
+      return Promise.reject(error);
+    }
+
     // Prevent infinite loops
     if (error.response.status === 401 && originalRequest.url.includes('grant_type=refresh_token')) {
       localStorage.clear();
@@ -35,7 +40,7 @@ axios.interceptors.response.use(
         if (tokenParts.exp > now) {
           return axios
             .post(
-              `${BACKEND_API_GATEWAY_URL}/api/account/oauth/token?grant_type=refresh_token&refresh_token=${refreshToken}`,
+              `${BACKEND_API_GATEWAY_URL}/api/account/oauth2/token?grant_type=refresh_token&refresh_token=${refreshToken}`,
               null,
               axiosConfig
             )
@@ -89,7 +94,7 @@ export const postLoginApi = async (loginRequestBody) => {
   };
   const loginRequestBodyEncoded = qs.stringify(loginRequestBody);
   const responseData = await axios
-    .post(`${BACKEND_API_GATEWAY_URL}/api/account/oauth/token`, loginRequestBodyEncoded, axiosConfig)
+    .post(`${BACKEND_API_GATEWAY_URL}/api/account/oauth2/token`, loginRequestBodyEncoded, axiosConfig)
     .then((response) => {
       return response.data;
     });
@@ -157,7 +162,8 @@ export const updateUserApi = async (userId, userUpdateRequestBody) => {
 };
 
 export const getProductDetailApi = async (productId) => {
-  const responseData = axios.get(`${BACKEND_API_GATEWAY_URL}/api/catalog/product/${productId}`).then((response) => {
+  const axiosConfig = getAxiosConfig();
+  const responseData = axios.get(`${BACKEND_API_GATEWAY_URL}/api/catalog/product/${productId}`, axiosConfig).then((response) => {
     return response.data;
   });
   return responseData;
@@ -188,15 +194,17 @@ export const deleteProductApi = async (productId) => {
 };
 
 export const getProductReviewsApi = async (productId) => {
-  const responseData = axios.get(`${BACKEND_API_GATEWAY_URL}/api/catalog/review?productId=${productId}`).then((response) => {
+  const axiosConfig = getAxiosConfig();
+  const responseData = axios.get(`${BACKEND_API_GATEWAY_URL}/api/catalog/review?productId=${productId}`, axiosConfig).then((response) => {
     return response.data;
   });
   return responseData;
 };
 
 export const getProductCategories = async () => {
+  const axiosConfig = getAxiosConfig();
   const responseData = axios
-    .get(`${BACKEND_API_GATEWAY_URL}/api/catalog/productCategories?direction=ASC&orderBy=PRODUCTCATEGORYNAME`)
+    .get(`${BACKEND_API_GATEWAY_URL}/api/catalog/productCategories?direction=ASC&orderBy=PRODUCTCATEGORYNAME`, axiosConfig)
     .then((response) => {
       return response.data;
     });
@@ -236,7 +244,8 @@ export const getImageApi = async (imageId) => {
 };
 
 export const getAllProductsDetailApi = async (pageNumber) => {
-  const responseData = axios.get(`${BACKEND_API_GATEWAY_URL}/api/catalog/products?page=${pageNumber}&size=8`).then((response) => {
+  const axiosConfig = getAxiosConfig();
+  const responseData = axios.get(`${BACKEND_API_GATEWAY_URL}/api/catalog/products?page=${pageNumber}&size=8`, axiosConfig).then((response) => {
     return response.data;
   });
   return responseData;

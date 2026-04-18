@@ -30,7 +30,6 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
  * @author: Devaraj Reddy, Date : 2019-06-30
  */
 @RestController
-@CrossOrigin
 public class UserController {
 
   @Autowired

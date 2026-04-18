@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RestController;
  * Date : 2019-06-17
  */
 @RestController
-@CrossOrigin
 public class CartItemController {
 
     @Autowired

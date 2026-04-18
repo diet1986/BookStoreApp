@@ -32,7 +32,6 @@ import java.net.URI;
  * Date : 2019-06-06
  */
 @RestController
-@CrossOrigin
 public class ProductController {
 
     @Autowired

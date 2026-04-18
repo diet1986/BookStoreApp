@@ -15,6 +15,9 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.io.Resource;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.Customizer;
@@ -108,6 +111,8 @@ public class AuthorizationServerConfig {
             );
 
         http.oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
+        // Disable CORS on auth server - gateway handles CORS for all downstream services
+        http.cors(cors -> cors.disable());
 
         SecurityFilterChain chain = http.build();
 

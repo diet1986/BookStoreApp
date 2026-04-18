@@ -26,6 +26,7 @@ public class AccountServiceResourceServerConfig {
     public SecurityFilterChain accountServiceSecurityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.disable())
             .headers(headers -> headers.frameOptions(frame -> frame.disable()))
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
