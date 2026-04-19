@@ -1,0 +1,58 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.paymentService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.paymentService.name }}
+    {{- include "bookstore.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.paymentService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.paymentService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.paymentService.name }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: payment-service
+        image: {{ include "bookstore.image" (dict "Values" .Values "image" .Values.paymentService.image) }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: {{ .Values.paymentService.port }}
+        env:
+        {{- include "bookstore.commonEnv" . | nindent 8 }}
+        - name: SERVER_PORT
+          value: {{ .Values.paymentService.port | quote }}
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: bookstore-secrets
+              key: STRIPE_SECRET_KEY
+        {{- include "bookstore.readinessProbe" .Values.paymentService.port | nindent 8 }}
+        {{- include "bookstore.livenessProbe" .Values.paymentService.port | nindent 8 }}
+        resources:
+          {{- toYaml .Values.paymentService.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.paymentService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.paymentService.name }}
+    {{- include "bookstore.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: {{ .Values.paymentService.name }}
+  ports:
+  - port: {{ .Values.paymentService.port }}
+    targetPort: {{ .Values.paymentService.port }}
+  type: ClusterIP

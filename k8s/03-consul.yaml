@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: consul
+  namespace: bookstore
+spec:
+  serviceName: consul-service
+  replicas: 3
+  selector:
+    matchLabels:
+      app: consul
+  template:
+    metadata:
+      labels:
+        app: consul
+    spec:
+      containers:
+      - name: consul
+        image: hashicorp/consul:1.17
+        ports:
+        - containerPort: 8500
+        - containerPort: 8300
+        - containerPort: 8301
+        args:
+        - "agent"
+        - "-server"
+        - "-bootstrap-expect=3"
+        - "-ui"
+        - "-client=0.0.0.0"
+        - "-retry-join=consul-0.consul-service.bookstore.svc.cluster.local"
+        readinessProbe:
+          httpGet:
+            path: /v1/status/leader
+            port: 8500
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul-service
+  namespace: bookstore
+spec:
+  clusterIP: None
+  selector:
+    app: consul
+  ports:
+  - name: http
+    port: 8500
+  - name: server
+    port: 8300
+  - name: serf-lan
+    port: 8301

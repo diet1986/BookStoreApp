@@ -1,0 +1,90 @@
+---
+# Allow API Gateway to reach all microservices
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-to-services
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - {{ .Values.accountService.name }}
+      - {{ .Values.catalogService.name }}
+      - {{ .Values.orderService.name }}
+      - {{ .Values.billingService.name }}
+      - {{ .Values.paymentService.name }}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: {{ .Values.apiGateway.name }}
+---
+# Allow order-service to call catalog, billing, payment (Feign clients)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-order-to-dependencies
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - {{ .Values.catalogService.name }}
+      - {{ .Values.billingService.name }}
+      - {{ .Values.paymentService.name }}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: {{ .Values.orderService.name }}
+---
+# Allow all services to reach Consul
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all-to-consul
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: consul
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.global.namespace }}
+    ports:
+    - port: 8500
+    - port: 8300
+    - port: 8301
+---
+# Allow all services to reach Zipkin
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all-to-zipkin
+  namespace: {{ .Values.global.namespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: zipkin
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.global.namespace }}
+    ports:
+    - port: 9411

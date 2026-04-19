@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-api-gateway-service
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-api-gateway-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-api-gateway-service
+    spec:
+      containers:
+      - name: api-gateway
+        image: REPLACE_WITH_ECR_REGISTRY/bookstore-api-gateway-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8765
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: SERVER_PORT
+          value: "8765"
+        - name: CONSUL_HOST
+          value: "consul-service"
+        - name: CONSUL_PORT
+          value: "8500"
+        - name: ZIPKIN_HOST
+          value: "zipkin-service"
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8765
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8765
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-api-gateway-service
+  namespace: bookstore
+spec:
+  selector:
+    app: bookstore-api-gateway-service
+  ports:
+  - port: 8765
+    targetPort: 8765
+  type: ClusterIP

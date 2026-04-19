@@ -1,0 +1,57 @@
+# AWS EKS production values
+# Usage: helm install bookstore ./helm/bookstore -f helm/values-aws.yaml
+
+global:
+  imageRegistry: "123456789.dkr.ecr.us-east-1.amazonaws.com"  # Replace with your ECR registry
+  imageTag: "latest"
+  namespace: bookstore
+  springProfile: kubernetes
+
+imagePullSecrets:
+  - name: ecr-secret
+
+database:
+  host: "bookstore.xxxx.us-east-1.rds.amazonaws.com"  # Replace with RDS endpoint
+  port: 3306
+  name: bookstore_db
+  user: bookstoreDBA
+  password: ""  # Set via --set database.password=xxx or external secret
+
+accountService:
+  replicas: 2
+  issuerUri: "https://bookstore.yourdomain.com/api/account"  # Replace with your domain
+
+apiGateway:
+  replicas: 2
+
+catalogService:
+  replicas: 3   # More replicas for read-heavy catalog
+
+orderService:
+  replicas: 2
+
+billingService:
+  replicas: 2
+
+paymentService:
+  replicas: 2
+  stripeSecretKey: ""  # Set via --set paymentService.stripeSecretKey=xxx
+
+frontend:
+  replicas: 2
+
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:123456789:certificate/xxx"  # Replace
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+  host: "bookstore.yourdomain.com"  # Replace with your domain
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70

@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-account-service
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-account-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-account-service
+    spec:
+      containers:
+      - name: account-service
+        image: REPLACE_WITH_ECR_REGISTRY/bookstore-account-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 4001
+        envFrom:
+        - configMapRef:
+            name: bookstore-config
+        - secretRef:
+            name: bookstore-secrets
+        env:
+        - name: SERVER_PORT
+          value: "4001"
+        - name: OAUTH2_ISSUER_URI
+          value: "http://bookstore-account-service:4001"
+        - name: JWT_KEY_PAIR_ALIAS
+          value: "jwt-key"
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 4001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 4001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-account-service
+  namespace: bookstore
+spec:
+  selector:
+    app: bookstore-account-service
+  ports:
+  - port: 4001
+    targetPort: 4001
+  type: ClusterIP

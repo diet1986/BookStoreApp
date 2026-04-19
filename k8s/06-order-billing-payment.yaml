@@ -1,0 +1,189 @@
+---
+# Order Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-order-service
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-order-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-order-service
+    spec:
+      containers:
+      - name: order-service
+        image: REPLACE_WITH_ECR_REGISTRY/bookstore-order-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 7001
+        envFrom:
+        - configMapRef:
+            name: bookstore-config
+        - secretRef:
+            name: bookstore-secrets
+        env:
+        - name: SERVER_PORT
+          value: "7001"
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 7001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 7001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-order-service
+  namespace: bookstore
+spec:
+  selector:
+    app: bookstore-order-service
+  ports:
+  - port: 7001
+    targetPort: 7001
+  type: ClusterIP
+---
+# Billing Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-billing-service
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-billing-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-billing-service
+    spec:
+      containers:
+      - name: billing-service
+        image: REPLACE_WITH_ECR_REGISTRY/bookstore-billing-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5001
+        envFrom:
+        - configMapRef:
+            name: bookstore-config
+        - secretRef:
+            name: bookstore-secrets
+        env:
+        - name: SERVER_PORT
+          value: "5001"
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 5001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 5001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-billing-service
+  namespace: bookstore
+spec:
+  selector:
+    app: bookstore-billing-service
+  ports:
+  - port: 5001
+    targetPort: 5001
+  type: ClusterIP
+---
+# Payment Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-payment-service
+  namespace: bookstore
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: bookstore-payment-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-payment-service
+    spec:
+      containers:
+      - name: payment-service
+        image: REPLACE_WITH_ECR_REGISTRY/bookstore-payment-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8001
+        envFrom:
+        - configMapRef:
+            name: bookstore-config
+        - secretRef:
+            name: bookstore-secrets
+        env:
+        - name: SERVER_PORT
+          value: "8001"
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-payment-service
+  namespace: bookstore
+spec:
+  selector:
+    app: bookstore-payment-service
+  ports:
+  - port: 8001
+    targetPort: 8001
+  type: ClusterIP

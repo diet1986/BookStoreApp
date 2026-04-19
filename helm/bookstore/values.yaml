@@ -1,0 +1,152 @@
+# Global settings
+global:
+  imageRegistry: ""          # e.g. 123456789.dkr.ecr.us-east-1.amazonaws.com
+  imageTag: "latest"
+  namespace: bookstore
+  springProfile: kubernetes
+
+# Image pull secrets (for ECR or private registry)
+imagePullSecrets: []
+
+# Database (AWS RDS)
+database:
+  host: ""                   # RDS endpoint e.g. bookstore.xxxx.us-east-1.rds.amazonaws.com
+  port: 3306
+  name: bookstore_db
+  user: bookstoreDBA
+  password: PaSSworD         # Override via --set or secret
+
+# Consul service discovery
+consul:
+  enabled: true
+  replicas: 3
+  image: hashicorp/consul
+  imageTag: "1.17"
+  port: 8500
+
+# Zipkin tracing
+zipkin:
+  enabled: true
+  image: openzipkin/zipkin
+  imageTag: "latest"
+  port: 9411
+
+# API Gateway
+apiGateway:
+  name: bookstore-api-gateway-service
+  image: bookstore-api-gateway-service
+  replicas: 2
+  port: 8765
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Account Service
+accountService:
+  name: bookstore-account-service
+  image: bookstore-account-service
+  replicas: 2
+  port: 4001
+  issuerUri: "http://bookstore-account-service:4001"
+  jwtKeystorePassword: devdcorespass
+  jwtKeyPairAlias: jwt-key
+  jwtKeyPairPassword: devdcorespass
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Catalog Service
+catalogService:
+  name: bookstore-catalog-service
+  image: bookstore-catalog-service
+  replicas: 2
+  port: 6001
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Order Service
+orderService:
+  name: bookstore-order-service
+  image: bookstore-order-service
+  replicas: 2
+  port: 7001
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Billing Service
+billingService:
+  name: bookstore-billing-service
+  image: bookstore-billing-service
+  replicas: 2
+  port: 5001
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Payment Service
+paymentService:
+  name: bookstore-payment-service
+  image: bookstore-payment-service
+  replicas: 2
+  port: 8001
+  stripeSecretKey: "sk_test_placeholder"
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+
+# Frontend
+frontend:
+  name: bookstore-frontend
+  image: bookstore-frontend
+  replicas: 2
+  port: 80
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Ingress (AWS ALB)
+ingress:
+  enabled: true
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: ""   # ACM cert ARN
+  host: ""                   # e.g. bookstore.yourdomain.com
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70

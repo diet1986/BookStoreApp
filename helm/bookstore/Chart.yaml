@@ -1,0 +1,14 @@
+apiVersion: v2
+name: bookstore
+description: BookStore Distributed Microservices Application
+type: application
+version: 1.0.0
+appVersion: "0.0.1-SNAPSHOT"
+maintainers:
+  - name: Deepak Srivastav
+    email: deepak.srivastav@gmail.com
+keywords:
+  - bookstore
+  - microservices
+  - spring-boot
+  - react

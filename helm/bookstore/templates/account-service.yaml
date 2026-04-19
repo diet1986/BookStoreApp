@@ -1,0 +1,89 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.accountService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.accountService.name }}
+    {{- include "bookstore.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.accountService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.accountService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.accountService.name }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: account-service
+        image: {{ include "bookstore.image" (dict "Values" .Values "image" .Values.accountService.image) }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: {{ .Values.accountService.port }}
+        env:
+        {{- include "bookstore.commonEnv" . | nindent 8 }}
+        - name: SERVER_PORT
+          value: {{ .Values.accountService.port | quote }}
+        - name: OAUTH2_ISSUER_URI
+          value: {{ .Values.accountService.issuerUri | quote }}
+        - name: JWT_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bookstore-secrets
+              key: JWT_KEYSTORE_PASSWORD
+        - name: JWT_KEY_PAIR_ALIAS
+          value: {{ .Values.accountService.jwtKeyPairAlias | quote }}
+        - name: JWT_KEY_PAIR_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: bookstore-secrets
+              key: JWT_KEY_PAIR_PASSWORD
+        {{- include "bookstore.readinessProbe" .Values.accountService.port | nindent 8 }}
+        {{- include "bookstore.livenessProbe" .Values.accountService.port | nindent 8 }}
+        resources:
+          {{- toYaml .Values.accountService.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.accountService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.accountService.name }}
+    {{- include "bookstore.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: {{ .Values.accountService.name }}
+  ports:
+  - port: {{ .Values.accountService.port }}
+    targetPort: {{ .Values.accountService.port }}
+  type: ClusterIP
+{{- if .Values.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.accountService.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.accountService.name }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

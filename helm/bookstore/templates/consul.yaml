@@ -1,0 +1,80 @@
+{{- if .Values.consul.enabled }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: consul
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: consul
+    {{- include "bookstore.labels" . | nindent 4 }}
+spec:
+  serviceName: consul-service
+  replicas: {{ .Values.consul.replicas }}
+  selector:
+    matchLabels:
+      app: consul
+  template:
+    metadata:
+      labels:
+        app: consul
+    spec:
+      containers:
+      - name: consul
+        image: {{ .Values.consul.image }}:{{ .Values.consul.imageTag }}
+        ports:
+        - containerPort: 8500
+          name: http
+        - containerPort: 8600
+          name: dns
+        - containerPort: 8300
+          name: server
+        - containerPort: 8301
+          name: serf-lan
+        env:
+        - name: CONSUL_BIND_INTERFACE
+          value: eth0
+        args:
+        - "agent"
+        - "-server"
+        - "-bootstrap-expect={{ .Values.consul.replicas }}"
+        - "-ui"
+        - "-client=0.0.0.0"
+        - "-retry-join=consul-0.consul-service.{{ .Values.global.namespace }}.svc.cluster.local"
+        readinessProbe:
+          httpGet:
+            path: /v1/status/leader
+            port: 8500
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consul-service
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: consul
+    {{- include "bookstore.labels" . | nindent 4 }}
+spec:
+  clusterIP: None
+  selector:
+    app: consul
+  ports:
+  - name: http
+    port: 8500
+    targetPort: 8500
+  - name: server
+    port: 8300
+    targetPort: 8300
+  - name: serf-lan
+    port: 8301
+    targetPort: 8301
+{{- end }}

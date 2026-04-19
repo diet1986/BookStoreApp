@@ -1,0 +1,75 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.orderService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.orderService.name }}
+    {{- include "bookstore.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.orderService.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Values.orderService.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.orderService.name }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: order-service
+        image: {{ include "bookstore.image" (dict "Values" .Values "image" .Values.orderService.image) }}
+        imagePullPolicy: Always
+        ports:
+        - containerPort: {{ .Values.orderService.port }}
+        env:
+        {{- include "bookstore.commonEnv" . | nindent 8 }}
+        - name: SERVER_PORT
+          value: {{ .Values.orderService.port | quote }}
+        {{- include "bookstore.readinessProbe" .Values.orderService.port | nindent 8 }}
+        {{- include "bookstore.livenessProbe" .Values.orderService.port | nindent 8 }}
+        resources:
+          {{- toYaml .Values.orderService.resources | nindent 10 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.orderService.name }}
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    app: {{ .Values.orderService.name }}
+    {{- include "bookstore.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: {{ .Values.orderService.name }}
+  ports:
+  - port: {{ .Values.orderService.port }}
+    targetPort: {{ .Values.orderService.port }}
+  type: ClusterIP
+{{- if .Values.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ .Values.orderService.name }}-hpa
+  namespace: {{ .Values.global.namespace }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ .Values.orderService.name }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

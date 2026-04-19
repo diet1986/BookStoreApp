@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore-catalog-service
+  namespace: bookstore
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: bookstore-catalog-service
+  template:
+    metadata:
+      labels:
+        app: bookstore-catalog-service
+    spec:
+      containers:
+      - name: catalog-service
+        image: REPLACE_WITH_ECR_REGISTRY/bookstore-catalog-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 6001
+        envFrom:
+        - configMapRef:
+            name: bookstore-config
+        - secretRef:
+            name: bookstore-secrets
+        env:
+        - name: SERVER_PORT
+          value: "6001"
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 6001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 5
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 6001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore-catalog-service
+  namespace: bookstore
+spec:
+  selector:
+    app: bookstore-catalog-service
+  ports:
+  - port: 6001
+    targetPort: 6001
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: bookstore-catalog-service-hpa
+  namespace: bookstore
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: bookstore-catalog-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
